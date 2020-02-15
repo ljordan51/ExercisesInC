@@ -33,8 +33,12 @@ s: string
 returns: string
 */
 char *reverse_string(char *s) {
-    //TODO: Fill this in.
-    return "";
+    int len = strlen(s);
+    char *p = (char*)malloc(len);
+    for(int i = len-1; i >=0; i--) {
+        p[len-i-1] = s[i];
+    }
+    return p;
 }
 
 /* ctoi: Converts a character to integer.
@@ -53,8 +57,8 @@ i: integer 0 to 9
 returns: character '0' to '9'
 */
 char itoc(int i) {
-    //TODO: Fill this in, with an appropriate assertion.
-    return '0';
+    assert(i>=0 && i<10);
+    return i + '0';
 }
 
 /* add_digits: Adds two decimal digits, returns the total and carry.
@@ -70,7 +74,17 @@ carry: pointer to char
 
 */
 void add_digits(char a, char b, char c, char *total, char *carry) {
-    //TODO: Fill this in.
+    int sum = ctoi(a) + ctoi(b) + ctoi(c);
+    if (isdigit(*carry)){ sum += ctoi(*carry);}
+    if (sum<10) {
+      *carry = '0';
+      *total = itoc(sum);
+    } else {
+      int ones = sum % 10;
+      int tens = (sum-ones)/10;
+      *total = itoc(ones);
+      *carry = itoc(tens);
+    }
 }
 
 /* Define a type to represent a BigInt.
@@ -111,9 +125,9 @@ void add_bigint(BigInt x, BigInt y, char carry_in, BigInt z) {
         b = *y;
     }
 
-    // printf("%c %c %c\n", a, b, carry_in);
+    // printf("a: %c, b: %c, carry_in: %c\n", a, b, carry_in);
     add_digits(a, b, carry_in, &total, &carry_out);
-    // printf("%c %c\n", carry_out, total);
+    // printf("carry_out: %c, total: %c\n", carry_out, total);
 
     // if total and carry are 0, we're done
     if (total == '0' && carry_out == '0') {
@@ -205,6 +219,6 @@ int main (int argc, char *argv[])
 
     //TODO: When you have the first three functions working,
     //      uncomment the following, and it should work.
-    // test_add_bigint();
+    test_add_bigint();
     return 0;
 }
