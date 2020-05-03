@@ -38,15 +38,44 @@ int main(int argc, char *argv[])
     int num_feeds = 5;
     char *search_phrase = argv[1];
     char var[255];
+    
+    int status;
+    pid_t pid;
+    int i;
 
-    for (int i=0; i<num_feeds; i++) {
+    for (i=0; i<num_feeds; i++) {
         sprintf(var, "RSS_FEED=%s", feeds[i]);
         char *vars[] = {var, NULL};
 
-        int res = execle(PYTHON, PYTHON, SCRIPT, search_phrase, NULL, vars);
-        if (res == -1) {
-            error("Can't run script.");
+        pid = fork();
+
+        /* check for an error */
+        if (pid == -1) {
+            perror(argv[0]);
+            error("fork failed");
         }
+
+        /* see if we're the parent or the child */
+        if (pid == 0) {
+            int res = execle(PYTHON, PYTHON, SCRIPT, search_phrase, NULL, vars);
+            if (res == -1) {
+                error("Can't run script.");
+            }
+            exit(0);
+        }  
+    }
+    
+    for (i=0; i<num_feeds; i++) {
+        pid = wait(&status);
+
+        if (pid == -1) {
+            perror(argv[0]);
+            error("wait failed");
+        }
+
+        // check the exit status of the child
+        status = WEXITSTATUS(status);
+        printf("Child %d exited with error code %d.\n", pid, status);
     }
     return 0;
 }

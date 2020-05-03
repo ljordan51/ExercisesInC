@@ -19,6 +19,9 @@ License: MIT License https://opensource.org/licenses/MIT
 // error information
 extern int errno;
 
+int globby = 1;
+int *pointy = (int*) 5;
+
 
 // get_seconds returns the number of seconds since the
 // beginning of the day, with microsecond precision
@@ -34,6 +37,32 @@ void child_code(int i)
 {
     sleep(i);
     printf("Hello from child %d.\n", i);
+    printf("Child %d stack location: %p\n", i, &i);
+    printf("Child %d globals location: %p\n", i, &globby);
+    printf("Child %d heap location: %p\n", i, &pointy);
+    // They are all exactly the same for the globals and heap
+    // and the same as the parent. The stack isn't the exact same
+    // address but that's because the int isn't passed by reference
+    // so it's address is just slightly further down the stack.
+    
+    // Terminal output:
+    // Creating child 0.
+    // Creating child 1.
+    // Hello from the parent.
+    // Parent stack location: 0x7ffc67a8fc2c
+    // Parent globals location: 0x55d55801b010
+    // Parent heap location: 0x55d55801b018
+    // Hello from child 0.
+    // Child 0 stack location: 0x7ffc67a8fbfc
+    // Child 0 globals location: 0x55d55801b010
+    // Child 0 heap location: 0x55d55801b018
+    // Child 11457 exited with error code 0.
+    // Hello from child 1.
+    // Child 1 stack location: 0x7ffc67a8fbfc
+    // Child 1 globals location: 0x55d55801b010
+    // Child 1 heap location: 0x55d55801b018
+    // Child 11458 exited with error code 1.
+    // Elapsed time = 1.000601 seconds.
 }
 
 // main takes two parameters: argc is the number of command-line
@@ -79,6 +108,9 @@ int main(int argc, char *argv[])
 
     /* parent continues */
     printf("Hello from the parent.\n");
+    printf("Parent stack location: %p\n", &i);
+    printf("Parent globals location: %p\n", &globby);
+    printf("Parent heap location: %p\n", &pointy);
 
     for (i=0; i<num_children; i++) {
         pid = wait(&status);
