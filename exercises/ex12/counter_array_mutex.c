@@ -8,19 +8,16 @@ License: GNU GPLv3
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "mutex.h"
 
-#define NUM_CHILDREN 5000
+#define NUM_CHILDREN 2
 
-/* Print an error message and exit.
-*/
 void perror_exit(char *s)
 {
     perror(s);
     exit(-1);
 }
 
-/* Call malloc and exit if it fails.
-*/
 void *check_malloc(int size)
 {
     void *p = malloc(size);
@@ -30,23 +27,31 @@ void *check_malloc(int size)
     return p;
 }
 
-/* Structure that contains variables shared between threads.
-*/
 typedef struct {
     int counter;
+    int end;
+    int *array;
+    Mutex *mutey;
 } Shared;
 
-/* Allocate the shared structure.
-*/
-Shared *make_shared()
+Shared *make_shared(int end)
 {
+    int i;
     Shared *shared = check_malloc(sizeof(Shared));
+
     shared->counter = 0;
+    shared->end = end;
+
+    shared->array = check_malloc(shared->end * sizeof(int));
+    for (i=0; i<shared->end; i++) {
+        shared->array[i] = 0;
+    }
+    
+    shared->mutey = make_mutex();
+    
     return shared;
 }
 
-/* Create a child thread.
-*/
 pthread_t make_thread(void *(*entry)(void *), Shared *shared)
 {
     int ret;
@@ -59,8 +64,6 @@ pthread_t make_thread(void *(*entry)(void *), Shared *shared)
     return thread;
 }
 
-/* Wait for a child thread.
-*/
 void join_thread(pthread_t thread)
 {
     int ret = pthread_join(thread, NULL);
@@ -69,21 +72,44 @@ void join_thread(pthread_t thread)
     }
 }
 
-/* Code run by the child threads.
-*/
 void child_code(Shared *shared)
 {
-    printf("counter = %d\n", shared->counter);
-    shared->counter++;
+    //printf("Starting child at counter %d\n", shared->counter);
+
+    while (1) {
+        if (shared->counter >= shared->end) {
+            return;
+        }
+        
+        mutex_lock(shared->mutey);
+        shared->array[shared->counter]++;
+        shared->counter++;
+
+        if (shared->counter % 10000 == 0) {
+            //printf("%d\n", shared->counter);
+        }
+        mutex_unlock(shared->mutey);
+    }
 }
 
-/* Entry point for the child threads.
-*/
 void *entry(void *arg)
 {
     Shared *shared = (Shared *) arg;
     child_code(shared);
+    //printf("Child done.\n");
     pthread_exit(NULL);
+}
+
+void check_array(Shared *shared)
+{
+    int i, errors=0;
+
+    //printf("Checking...\n");
+
+    for (i=0; i<shared->end; i++) {
+        if (shared->array[i] != 1) errors++;
+    }
+    //printf("%d errors.\n", errors);
 }
 
 int main()
@@ -91,7 +117,7 @@ int main()
     int i;
     pthread_t child[NUM_CHILDREN];
 
-    Shared *shared = make_shared();
+    Shared *shared = make_shared(1000000);
 
     for (i=0; i<NUM_CHILDREN; i++) {
         child[i] = make_thread(entry, shared);
@@ -101,6 +127,6 @@ int main()
         join_thread(child[i]);
     }
 
-    printf("Final value of counter is %d\n", shared->counter);
+    check_array(shared);
     return 0;
 }
